@@ -9,7 +9,7 @@ import (
 )
 
 type PatientRepository interface {
-	PatientByPassportNumber(pn string) (entity.Patient, error)
+	PatientByPassportNumber(p string) (entity.Patient, error)
 	CreatePatient(p entity.Patient) (entity.Patient, error)
 }
 

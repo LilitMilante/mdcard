@@ -2,6 +2,7 @@ package dal
 
 import (
 	"database/sql"
+	"errors"
 
 	"medical-card/internal/entity"
 	"medical-card/internal/service"
@@ -19,10 +20,55 @@ func NewPatientRepository(db *sql.DB) *PatientRepository {
 	}
 }
 
-func (r *PatientRepository) PatientByPassportNumber(pn string) (entity.Patient, error) {
-	return entity.Patient{}, nil
+func (r *PatientRepository) PatientByPassportNumber(n string) (entity.Patient, error) {
+	var p entity.Patient
+
+	q := `
+SELECT id, full_name, data_of_born, address, phone_number, passport_number, login, created_at
+FROM patients 
+WHERE passport_number = $1
+`
+
+	err := r.db.QueryRow(q, n).
+		Scan(
+			&p.ID,
+			&p.FullName,
+			&p.DateOfBorn,
+			&p.Address,
+			&p.PhoneNumber,
+			&p.PassportNumber,
+			&p.Login,
+			&p.CreatedAt,
+		)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return p, service.ErrNotFound
+		}
+
+		return p, err
+	}
+
+	return p, nil
 }
 
 func (r *PatientRepository) CreatePatient(p entity.Patient) (entity.Patient, error) {
-	return entity.Patient{}, nil
+	q := `
+INSERT INTO patients (full_name, data_of_born, address, phone_number, passport_number, login, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
+`
+	err := r.db.QueryRow(
+		q,
+		p.FullName,
+		p.DateOfBorn,
+		p.Address,
+		p.PhoneNumber,
+		p.PassportNumber,
+		p.Login,
+		p.CreatedAt).
+		Scan(&p.ID)
+	if err != nil {
+		return p, err
+	}
+
+	return p, nil
 }

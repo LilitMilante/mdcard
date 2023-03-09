@@ -7,11 +7,14 @@ import (
 
 	"medical-card/internal/entity"
 	"medical-card/internal/service"
+
+	"github.com/gorilla/mux"
 )
 
 type Service interface {
 	AddPatient(p entity.Patient) (entity.Patient, error)
 	Patients() ([]entity.Patient, error)
+	PatientByPassportNumber(n string) (entity.Patient, error)
 }
 
 type PatientHandler struct {
@@ -53,4 +56,16 @@ func (h *PatientHandler) Patients(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	SendJSON(w, patients)
+}
+
+func (h *PatientHandler) PatientByPassportNumber(w http.ResponseWriter, r *http.Request) {
+	passNumber := mux.Vars(r)["passport_number"]
+
+	patient, err := h.srv.PatientByPassportNumber(passNumber)
+	if err != nil {
+		SendErr(w, http.StatusInsufficientStorage, err)
+		return
+	}
+
+	SendJSON(w, patient)
 }

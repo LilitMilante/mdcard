@@ -29,6 +29,7 @@ func NewServer(port string, ph *PatientHandler) *Server {
 func (s *Server) Start() error {
 	s.r.HandleFunc("/patients", s.ph.AddPatient).Methods(http.MethodPost)
 	s.r.HandleFunc("/patients", s.ph.Patients).Methods(http.MethodGet)
+	s.r.HandleFunc("/patients/{passport_number}", s.ph.PatientByPassportNumber).Methods(http.MethodGet)
 
 	return s.srv.ListenAndServe()
 }

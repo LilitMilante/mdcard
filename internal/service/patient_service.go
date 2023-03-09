@@ -45,3 +45,7 @@ func (s *PatientService) AddPatient(p entity.Patient) (entity.Patient, error) {
 func (s *PatientService) Patients() ([]entity.Patient, error) {
 	return s.repo.Patients()
 }
+
+func (s *PatientService) PatientByPassportNumber(n string) (entity.Patient, error) {
+	return s.repo.PatientByPassportNumber(n)
+}

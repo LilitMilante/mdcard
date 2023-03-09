@@ -11,6 +11,7 @@ import (
 type PatientRepository interface {
 	PatientByPassportNumber(p string) (entity.Patient, error)
 	CreatePatient(p entity.Patient) (entity.Patient, error)
+	Patients() ([]entity.Patient, error)
 }
 
 type PatientService struct {
@@ -39,4 +40,8 @@ func (s *PatientService) AddPatient(p entity.Patient) (entity.Patient, error) {
 	}
 
 	return p, nil
+}
+
+func (s *PatientService) Patients() ([]entity.Patient, error) {
+	return s.repo.Patients()
 }

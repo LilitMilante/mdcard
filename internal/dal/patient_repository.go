@@ -72,3 +72,39 @@ VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
 
 	return p, nil
 }
+
+func (r *PatientRepository) Patients() ([]entity.Patient, error) {
+	q := `
+SELECT id, full_name, data_of_born, address, phone_number, passport_number, login, created_at
+FROM patients 
+`
+	rows, err := r.db.Query(q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var patients []entity.Patient
+
+	for rows.Next() {
+		var p entity.Patient
+
+		err = rows.Scan(
+			&p.ID,
+			&p.FullName,
+			&p.DateOfBorn,
+			&p.Address,
+			&p.PhoneNumber,
+			&p.PassportNumber,
+			&p.Login,
+			&p.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		patients = append(patients, p)
+	}
+
+	return patients, nil
+}

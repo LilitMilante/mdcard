@@ -11,6 +11,7 @@ import (
 
 type Service interface {
 	AddPatient(p entity.Patient) (entity.Patient, error)
+	Patients() ([]entity.Patient, error)
 }
 
 type PatientHandler struct {
@@ -42,4 +43,14 @@ func (h *PatientHandler) AddPatient(w http.ResponseWriter, r *http.Request) {
 	}
 
 	SendJSON(w, patient)
+}
+
+func (h *PatientHandler) Patients(w http.ResponseWriter, _ *http.Request) {
+	patients, err := h.srv.Patients()
+	if err != nil {
+		SendErr(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	SendJSON(w, patients)
 }

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -9,10 +10,10 @@ import (
 )
 
 type PatientRepository interface {
-	PatientByPassportNumber(passNumber string) (entity.Patient, error)
-	PatientByLogin(login string) (entity.Patient, error)
-	CreatePatient(p entity.Patient) (entity.Patient, error)
-	Patients() ([]entity.Patient, error)
+	PatientByPassportNumber(ctx context.Context, passNumber string) (entity.Patient, error)
+	PatientByLogin(ctx context.Context, login string) (entity.Patient, error)
+	CreatePatient(ctx context.Context, p entity.Patient) (entity.Patient, error)
+	Patients(ctx context.Context) ([]entity.Patient, error)
 }
 
 type PatientService struct {
@@ -23,8 +24,8 @@ func NewPatientService(repo PatientRepository) *PatientService {
 	return &PatientService{repo: repo}
 }
 
-func (s *PatientService) AddPatient(p entity.Patient) (entity.Patient, error) {
-	_, err := s.repo.PatientByPassportNumber(p.PassportNumber)
+func (s *PatientService) AddPatient(ctx context.Context, p entity.Patient) (entity.Patient, error) {
+	_, err := s.repo.PatientByPassportNumber(ctx, p.PassportNumber)
 	if err == nil {
 		return p, fmt.Errorf("patient with passport %q: %w", p.PassportNumber, ErrAlreadyExists)
 	}
@@ -33,7 +34,7 @@ func (s *PatientService) AddPatient(p entity.Patient) (entity.Patient, error) {
 		return p, fmt.Errorf("patient with passport %q: %w", p.PassportNumber, err)
 	}
 
-	_, err = s.repo.PatientByLogin(p.Login)
+	_, err = s.repo.PatientByLogin(ctx, p.Login)
 	if err == nil {
 		return p, fmt.Errorf("patient with login %q: %w", p.Login, ErrAlreadyExists)
 	}
@@ -44,7 +45,7 @@ func (s *PatientService) AddPatient(p entity.Patient) (entity.Patient, error) {
 
 	p.CreatedAt = time.Now()
 
-	p, err = s.repo.CreatePatient(p)
+	p, err = s.repo.CreatePatient(ctx, p)
 	if err != nil {
 		return p, fmt.Errorf("create patient: %w", err)
 	}
@@ -52,10 +53,10 @@ func (s *PatientService) AddPatient(p entity.Patient) (entity.Patient, error) {
 	return p, nil
 }
 
-func (s *PatientService) Patients() ([]entity.Patient, error) {
-	return s.repo.Patients()
+func (s *PatientService) Patients(ctx context.Context) ([]entity.Patient, error) {
+	return s.repo.Patients(ctx)
 }
 
-func (s *PatientService) PatientByPassportNumber(passNumber string) (entity.Patient, error) {
-	return s.repo.PatientByPassportNumber(passNumber)
+func (s *PatientService) PatientByPassportNumber(ctx context.Context, passNumber string) (entity.Patient, error) {
+	return s.repo.PatientByPassportNumber(ctx, passNumber)
 }

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -12,9 +13,9 @@ import (
 )
 
 type Service interface {
-	AddPatient(p entity.Patient) (entity.Patient, error)
-	Patients() ([]entity.Patient, error)
-	PatientByPassportNumber(passNumber string) (entity.Patient, error)
+	AddPatient(ctx context.Context, p entity.Patient) (entity.Patient, error)
+	Patients(ctx context.Context) ([]entity.Patient, error)
+	PatientByPassportNumber(ctx context.Context, passNumber string) (entity.Patient, error)
 }
 
 type PatientHandler struct {
@@ -34,7 +35,7 @@ func (h *PatientHandler) AddPatient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	patient, err = h.srv.AddPatient(patient)
+	patient, err = h.srv.AddPatient(r.Context(), patient)
 	if err != nil {
 		if errors.Is(err, service.ErrAlreadyExists) {
 			SendErr(w, http.StatusConflict, err)
@@ -48,8 +49,8 @@ func (h *PatientHandler) AddPatient(w http.ResponseWriter, r *http.Request) {
 	SendJSON(w, patient)
 }
 
-func (h *PatientHandler) Patients(w http.ResponseWriter, _ *http.Request) {
-	patients, err := h.srv.Patients()
+func (h *PatientHandler) Patients(w http.ResponseWriter, r *http.Request) {
+	patients, err := h.srv.Patients(r.Context())
 	if err != nil {
 		SendErr(w, http.StatusInternalServerError, err)
 		return
@@ -61,7 +62,7 @@ func (h *PatientHandler) Patients(w http.ResponseWriter, _ *http.Request) {
 func (h *PatientHandler) PatientByPassportNumber(w http.ResponseWriter, r *http.Request) {
 	passNumber := mux.Vars(r)["passport_number"]
 
-	patient, err := h.srv.PatientByPassportNumber(passNumber)
+	patient, err := h.srv.PatientByPassportNumber(r.Context(), passNumber)
 	if err != nil {
 		SendErr(w, http.StatusInsufficientStorage, err)
 		return

@@ -1,6 +1,7 @@
 package dal
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -21,20 +22,21 @@ func NewPatientRepository(db *sql.DB) *PatientRepository {
 	}
 }
 
-func (r *PatientRepository) PatientByPassportNumber(passNumber string) (entity.Patient, error) {
-	return r.findPatientByColumn("passport_number", passNumber)
+func (r *PatientRepository) PatientByPassportNumber(ctx context.Context, passNumber string) (entity.Patient, error) {
+	return r.findPatientByColumn(ctx, "passport_number", passNumber)
 }
 
-func (r *PatientRepository) PatientByLogin(login string) (entity.Patient, error) {
-	return r.findPatientByColumn("login", login)
+func (r *PatientRepository) PatientByLogin(ctx context.Context, login string) (entity.Patient, error) {
+	return r.findPatientByColumn(ctx, "login", login)
 }
 
-func (r *PatientRepository) CreatePatient(p entity.Patient) (entity.Patient, error) {
+func (r *PatientRepository) CreatePatient(ctx context.Context, p entity.Patient) (entity.Patient, error) {
 	q := `
 INSERT INTO patients (full_name, data_of_born, address, phone_number, passport_number, login, created_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
 `
-	err := r.db.QueryRow(
+	err := r.db.QueryRowContext(
+		ctx,
 		q,
 		p.FullName,
 		p.DateOfBorn,
@@ -51,12 +53,12 @@ VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
 	return p, nil
 }
 
-func (r *PatientRepository) Patients() ([]entity.Patient, error) {
+func (r *PatientRepository) Patients(ctx context.Context) ([]entity.Patient, error) {
 	q := `
 SELECT id, full_name, data_of_born, address, phone_number, passport_number, login, created_at
 FROM patients 
 `
-	rows, err := r.db.Query(q)
+	rows, err := r.db.QueryContext(ctx, q)
 	if err != nil {
 		return nil, err
 	}
@@ -87,13 +89,13 @@ FROM patients
 	return patients, nil
 }
 
-func (r *PatientRepository) findPatientByColumn(col string, value any) (entity.Patient, error) {
+func (r *PatientRepository) findPatientByColumn(ctx context.Context, col string, value any) (entity.Patient, error) {
 	var p entity.Patient
 
 	q := "SELECT id, full_name, data_of_born, address, phone_number, passport_number, login, created_at FROM patients"
 	q = fmt.Sprintf("%s WHERE %s = $1", q, col)
 
-	err := r.db.QueryRow(q, value).
+	err := r.db.QueryRowContext(ctx, q, value).
 		Scan(
 			&p.ID,
 			&p.FullName,

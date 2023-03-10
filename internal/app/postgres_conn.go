@@ -3,6 +3,8 @@ package app
 import (
 	"database/sql"
 	"fmt"
+
+	_ "github.com/lib/pq"
 )
 
 func NewPostgresClient(c DBConfig) (*sql.DB, error) {

@@ -7,8 +7,6 @@ import (
 	"medical-card/internal/app"
 	"medical-card/internal/dal"
 	"medical-card/internal/service"
-
-	_ "github.com/lib/pq"
 )
 
 func main() {

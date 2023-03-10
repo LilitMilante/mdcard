@@ -3,6 +3,7 @@ package dal
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"medical-card/internal/entity"
 	"medical-card/internal/service"
@@ -20,35 +21,12 @@ func NewPatientRepository(db *sql.DB) *PatientRepository {
 	}
 }
 
-func (r *PatientRepository) PatientByPassportNumber(n string) (entity.Patient, error) {
-	var p entity.Patient
+func (r *PatientRepository) PatientByPassportNumber(passNumber string) (entity.Patient, error) {
+	return r.findPatientByColumn("passport_number", passNumber)
+}
 
-	q := `
-SELECT id, full_name, data_of_born, address, phone_number, passport_number, login, created_at
-FROM patients 
-WHERE passport_number = $1
-`
-
-	err := r.db.QueryRow(q, n).
-		Scan(
-			&p.ID,
-			&p.FullName,
-			&p.DateOfBorn,
-			&p.Address,
-			&p.PhoneNumber,
-			&p.PassportNumber,
-			&p.Login,
-			&p.CreatedAt,
-		)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return p, service.ErrNotFound
-		}
-
-		return p, err
-	}
-
-	return p, nil
+func (r *PatientRepository) PatientByLogin(login string) (entity.Patient, error) {
+	return r.findPatientByColumn("login", login)
 }
 
 func (r *PatientRepository) CreatePatient(p entity.Patient) (entity.Patient, error) {
@@ -107,4 +85,32 @@ FROM patients
 	}
 
 	return patients, nil
+}
+
+func (r *PatientRepository) findPatientByColumn(col string, value any) (entity.Patient, error) {
+	var p entity.Patient
+
+	q := "SELECT id, full_name, data_of_born, address, phone_number, passport_number, login, created_at FROM patients"
+	q = fmt.Sprintf("%s WHERE %s = $1", q, col)
+
+	err := r.db.QueryRow(q, value).
+		Scan(
+			&p.ID,
+			&p.FullName,
+			&p.DateOfBorn,
+			&p.Address,
+			&p.PhoneNumber,
+			&p.PassportNumber,
+			&p.Login,
+			&p.CreatedAt,
+		)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return p, service.ErrNotFound
+		}
+
+		return p, err
+	}
+
+	return p, nil
 }

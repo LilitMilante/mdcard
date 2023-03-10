@@ -14,7 +14,7 @@ import (
 type Service interface {
 	AddPatient(p entity.Patient) (entity.Patient, error)
 	Patients() ([]entity.Patient, error)
-	PatientByPassportNumber(n string) (entity.Patient, error)
+	PatientByPassportNumber(passNumber string) (entity.Patient, error)
 }
 
 type PatientHandler struct {

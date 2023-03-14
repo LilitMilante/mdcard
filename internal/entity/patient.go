@@ -8,14 +8,15 @@ import (
 )
 
 type Patient struct {
-	ID             int64     `json:"id,omitempty"`
-	FullName       string    `json:"full_name,omitempty"`
+	ID             int64     `json:"id"`
+	FullName       string    `json:"full_name"`
 	DateOfBorn     time.Time `json:"date_of_born"`
 	Address        Address   `json:"address"`
-	PhoneNumber    string    `json:"phone_number,omitempty"`
-	PassportNumber string    `json:"passport_number,omitempty"`
-	Login          string    `json:"login,omitempty"`
+	PhoneNumber    string    `json:"phone_number"`
+	PassportNumber string    `json:"passport_number"`
+	Login          string    `json:"login"`
 	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 type Address struct {

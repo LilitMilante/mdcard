@@ -6,6 +6,7 @@ CREATE TABLE patients (
     phone_number TEXT NOT NULL,
     passport_number TEXT UNIQUE NOT NULL,
     login TEXT UNIQUE NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL
 );
 

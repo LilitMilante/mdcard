@@ -33,5 +33,9 @@ func (s *Server) Start() error {
 	s.r.HandleFunc("/patients/{id}", s.ph.UpdatePatient).Methods(http.MethodPut)
 	s.r.HandleFunc("/patients/{id}", s.ph.DeletePatient).Methods(http.MethodDelete)
 
+	s.r.HandleFunc("/patients/cards", s.ph.AddCard).Methods(http.MethodPost)
+	s.r.HandleFunc("/patients/cards/{passport_number}", s.ph.CardByPatientPassportNumber).Methods(http.MethodGet)
+	s.r.HandleFunc("/patients/cards/{id}", s.ph.UpdateCard).Methods(http.MethodPut)
+
 	return s.srv.ListenAndServe()
 }

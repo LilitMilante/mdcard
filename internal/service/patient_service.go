@@ -17,6 +17,10 @@ type PatientRepository interface {
 	Patients(ctx context.Context) ([]entity.Patient, error)
 	UpdatePatient(ctx context.Context, id int64, p entity.Patient) (entity.Patient, error)
 	DeletePatient(ctx context.Context, id int64) error
+
+	CreateCard(ctx context.Context, c entity.Card) (entity.Card, error)
+	CardByPatientPassportNumber(ctx context.Context, number string) (entity.Card, error)
+	UpdateCard(ctx context.Context, id int64, c entity.Card) (entity.Card, error)
 }
 
 type PatientService struct {
@@ -26,6 +30,8 @@ type PatientService struct {
 func NewPatientService(repo PatientRepository) *PatientService {
 	return &PatientService{repo: repo}
 }
+
+// Patient methods
 
 func (s *PatientService) AddPatient(ctx context.Context, p entity.Patient) (entity.Patient, error) {
 	_, err := s.repo.PatientByPassportNumber(ctx, p.PassportNumber)
@@ -47,6 +53,7 @@ func (s *PatientService) AddPatient(ctx context.Context, p entity.Patient) (enti
 	}
 
 	p.CreatedAt = time.Now()
+	p.UpdatedAt = p.CreatedAt
 
 	p, err = s.repo.CreatePatient(ctx, p)
 	if err != nil {
@@ -87,4 +94,44 @@ func (s *PatientService) DeletePatient(ctx context.Context, id int64) error {
 	}
 
 	return s.repo.DeletePatient(ctx, id)
+}
+
+// Card methods
+
+func (s *PatientService) AddCard(ctx context.Context, c entity.Card) (entity.Card, error) {
+	_, err := s.repo.PatientByID(ctx, c.PatientID)
+	if err == nil {
+		return c, fmt.Errorf("card with patient id %q: %w", c.PatientID, ErrAlreadyExists)
+	}
+
+	if !errors.Is(err, ErrNotFound) {
+		return c, fmt.Errorf("card with patient %q: %w", c.PatientID, err)
+	}
+
+	c.CreatedAt = time.Now()
+	c.UpdatedAt = c.CreatedAt
+
+	card, err := s.repo.CreateCard(ctx, c)
+	if err != nil {
+		return card, fmt.Errorf("create card: %w", err)
+	}
+
+	return card, nil
+}
+
+func (s *PatientService) CardByPatientPassportNumber(ctx context.Context, number string) (entity.Card, error) {
+	return s.repo.CardByPatientPassportNumber(ctx, number)
+}
+
+func (s *PatientService) UpdateCard(ctx context.Context, id int64, c entity.Card) (entity.Card, error) {
+	_, err := s.repo.PatientByID(ctx, id)
+	if err != nil {
+		return c, fmt.Errorf("patient with id %d: %w", id, err)
+	}
+
+	c.UpdatedAt = time.Now()
+
+	c, err = s.repo.UpdateCard(ctx, id, c)
+
+	return c, err
 }

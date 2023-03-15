@@ -22,6 +22,8 @@ func NewPatientRepository(db *sql.DB) *PatientRepository {
 	}
 }
 
+// Patient methods
+
 func (r *PatientRepository) PatientByPassportNumber(ctx context.Context, passNumber string) (entity.Patient, error) {
 	return r.findPatientByColumn(ctx, "passport_number", passNumber)
 }
@@ -51,11 +53,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id
 		p.CreatedAt,
 		p.UpdatedAt).
 		Scan(&p.ID)
-	if err != nil {
-		return p, err
-	}
 
-	return p, nil
+	return p, err
 }
 
 func (r *PatientRepository) Patients(ctx context.Context) ([]entity.Patient, error) {
@@ -99,10 +98,9 @@ func (r *PatientRepository) UpdatePatient(ctx context.Context, id int64, p entit
 UPDATE patients
 SET full_name = $1, data_of_born = $2, address = $3, phone_number = $4, passport_number = $5, login = $6, updated_at = $7
 WHERE id = $8
-RETURNING id, updated_at
 `
 
-	err := r.db.QueryRowContext(
+	_, err := r.db.ExecContext(
 		ctx,
 		q,
 		p.FullName,
@@ -112,11 +110,7 @@ RETURNING id, updated_at
 		p.PassportNumber,
 		p.Login,
 		p.UpdatedAt,
-		id,
-	).Scan(
-		&p.ID,
-		&p.UpdatedAt,
-	)
+		id)
 	if err != nil {
 		return p, err
 	}
@@ -159,4 +153,77 @@ func (r *PatientRepository) findPatientByColumn(ctx context.Context, col string,
 	}
 
 	return p, nil
+}
+
+// Card methods
+
+func (r *PatientRepository) CreateCard(ctx context.Context, c entity.Card) (entity.Card, error) {
+	q := `
+INSERT INTO cards (patient_id, chronic_diseases, disability_group, blood_type, rh_factor, consultations)
+VALUES ($1, $2, $3, $4, $5, $6) RETURNING id
+`
+	err := r.db.QueryRowContext(
+		ctx,
+		q,
+		c.PatientID,
+		c.ChronicDiseases,
+		c.DisabilityGroup,
+		c.BloodType,
+		c.RhFactor,
+		c.Consultations).Scan(&c.ID)
+
+	return c, err
+}
+
+func (r *PatientRepository) CardByPatientPassportNumber(ctx context.Context, number string) (entity.Card, error) {
+	var c entity.Card
+
+	q := `
+SELECT c.id, c.patient_id, c.chronic_diseases, c.disability_group, c.blood_type, c.rh_factor, c.consultations
+FROM cards as c
+    INNER JOIN patients p on p.id = c.patient_id 
+WHERE p.passport_number = $1
+`
+
+	err := r.db.QueryRowContext(ctx, q, number).
+		Scan(
+			&c.ID,
+			&c.PatientID,
+			&c.ChronicDiseases,
+			&c.DisabilityGroup,
+			&c.BloodType,
+			&c.RhFactor,
+			&c.Consultations,
+		)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return c, service.ErrNotFound
+		}
+
+		return c, err
+	}
+
+	return c, nil
+}
+
+func (r *PatientRepository) UpdateCard(ctx context.Context, id int64, c entity.Card) (entity.Card, error) {
+	q := `
+UPDATE cards
+SET patient_id = $1,  chronic_diseases = $2, disability_group = $3, blood_type = $4, rh_factor = $5, consultations = $6
+WHERE id = $7
+`
+
+	_, err := r.db.ExecContext(
+		ctx,
+		q,
+		&c.PatientID,
+		&c.ChronicDiseases,
+		&c.DisabilityGroup,
+		&c.BloodType,
+		&c.RhFactor,
+		&c.Consultations,
+		id,
+	)
+
+	return c, err
 }

@@ -19,6 +19,10 @@ type Service interface {
 	PatientByPassportNumber(ctx context.Context, passNumber string) (entity.Patient, error)
 	UpdatePatient(ctx context.Context, id int64, p entity.Patient) (entity.Patient, error)
 	DeletePatient(ctx context.Context, id int64) error
+
+	AddCard(ctx context.Context, c entity.Card) (entity.Card, error)
+	CardByPatientPassportNumber(ctx context.Context, number string) (entity.Card, error)
+	UpdateCard(ctx context.Context, id int64, c entity.Card) (entity.Card, error)
 }
 
 type PatientHandler struct {
@@ -28,6 +32,8 @@ type PatientHandler struct {
 func NewPatientHandler(srv Service) *PatientHandler {
 	return &PatientHandler{srv: srv}
 }
+
+// Patient methods
 
 func (h *PatientHandler) AddPatient(w http.ResponseWriter, r *http.Request) {
 	var patient entity.Patient
@@ -112,4 +118,65 @@ func (h *PatientHandler) DeletePatient(w http.ResponseWriter, r *http.Request) {
 	}
 
 	SendJSON(w, id)
+}
+
+// Card Methods
+
+func (h *PatientHandler) AddCard(w http.ResponseWriter, r *http.Request) {
+	var card entity.Card
+
+	err := json.NewDecoder(r.Body).Decode(&card)
+	if err != nil {
+		SendErr(w, http.StatusBadRequest, err)
+		return
+	}
+
+	card, err = h.srv.AddCard(r.Context(), card)
+	if err != nil {
+		if errors.Is(err, service.ErrAlreadyExists) {
+			SendErr(w, http.StatusConflict, err)
+			return
+		}
+
+		SendErr(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	SendJSON(w, card)
+}
+
+func (h *PatientHandler) CardByPatientPassportNumber(w http.ResponseWriter, r *http.Request) {
+	passNumber := mux.Vars(r)["passport_number"]
+
+	card, err := h.srv.CardByPatientPassportNumber(r.Context(), passNumber)
+	if err != nil {
+		SendErr(w, http.StatusInsufficientStorage, err)
+		return
+	}
+
+	SendJSON(w, card)
+}
+
+func (h *PatientHandler) UpdateCard(w http.ResponseWriter, r *http.Request) {
+	var card entity.Card
+
+	err := json.NewDecoder(r.Body).Decode(&card)
+	if err != nil {
+		SendErr(w, http.StatusBadRequest, err)
+		return
+	}
+
+	id, err := strconv.Atoi(mux.Vars(r)["id"])
+	if err != nil {
+		SendErr(w, http.StatusBadRequest, err)
+		return
+	}
+
+	card, err = h.srv.UpdateCard(r.Context(), int64(id), card)
+	if err != nil {
+		SendErr(w, http.StatusInsufficientStorage, err)
+		return
+	}
+
+	SendJSON(w, card)
 }

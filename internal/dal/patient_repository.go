@@ -93,7 +93,7 @@ FROM patients
 	return patients, nil
 }
 
-func (r *PatientRepository) UpdatePatient(ctx context.Context, id int64, p entity.Patient) (entity.Patient, error) {
+func (r *PatientRepository) UpdatePatient(ctx context.Context, id int64, p entity.Patient) error {
 	q := `
 UPDATE patients
 SET full_name = $1, data_of_born = $2, address = $3, phone_number = $4, passport_number = $5, login = $6, updated_at = $7
@@ -112,10 +112,10 @@ WHERE id = $8
 		p.UpdatedAt,
 		id)
 	if err != nil {
-		return p, err
+		return err
 	}
 
-	return p, nil
+	return nil
 }
 
 func (r *PatientRepository) DeletePatient(ctx context.Context, id int64) error {
@@ -146,11 +146,22 @@ func (r *PatientRepository) findPatientByColumn(ctx context.Context, col string,
 		)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return p, service.ErrNotFound
+			return p, fmt.Errorf("get patient by %s %v: %w", col, value, service.ErrNotFound)
 		}
 
-		return p, err
+		return p, fmt.Errorf("get patient by %s %v: %w", col, value, err)
 	}
+
+	c, err := r.patientCard(ctx, p.ID)
+	if err != nil {
+		if errors.Is(err, service.ErrNotFound) {
+			return p, nil
+		}
+
+		return p, fmt.Errorf("get patient %d card: %w", p.ID, err)
+	}
+
+	p.Card = &c
 
 	return p, nil
 }
@@ -159,7 +170,7 @@ func (r *PatientRepository) findPatientByColumn(ctx context.Context, col string,
 
 func (r *PatientRepository) CreateCard(ctx context.Context, c entity.Card) (entity.Card, error) {
 	q := `
-INSERT INTO cards (patient_id, chronic_diseases, disability_group, blood_type, rh_factor, consultations)
+INSERT INTO cards (patient_id, chronic_diseases, disability_group, blood_type, rh_factor, consultations, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6) RETURNING id
 `
 	err := r.db.QueryRowContext(
@@ -170,22 +181,23 @@ VALUES ($1, $2, $3, $4, $5, $6) RETURNING id
 		c.DisabilityGroup,
 		c.BloodType,
 		c.RhFactor,
-		c.Consultations).Scan(&c.ID)
+		c.Consultations,
+		c.CreatedAt,
+		c.UpdatedAt).Scan(&c.ID)
 
 	return c, err
 }
 
-func (r *PatientRepository) CardByPatientPassportNumber(ctx context.Context, number string) (entity.Card, error) {
+func (r *PatientRepository) CardByID(ctx context.Context, id int64) (entity.Card, error) {
 	var c entity.Card
 
 	q := `
-SELECT c.id, c.patient_id, c.chronic_diseases, c.disability_group, c.blood_type, c.rh_factor, c.consultations
-FROM cards as c
-    INNER JOIN patients p on p.id = c.patient_id 
-WHERE p.passport_number = $1
+SELECT id, patient_id, chronic_diseases, disability_group, blood_type, rh_factor, consultations, created_at, updated_at
+FROM cards
+WHERE id = $1
 `
 
-	err := r.db.QueryRowContext(ctx, q, number).
+	err := r.db.QueryRowContext(ctx, q, id).
 		Scan(
 			&c.ID,
 			&c.PatientID,
@@ -194,6 +206,8 @@ WHERE p.passport_number = $1
 			&c.BloodType,
 			&c.RhFactor,
 			&c.Consultations,
+			&c.CreatedAt,
+			&c.UpdatedAt,
 		)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -206,7 +220,7 @@ WHERE p.passport_number = $1
 	return c, nil
 }
 
-func (r *PatientRepository) UpdateCard(ctx context.Context, id int64, c entity.Card) (entity.Card, error) {
+func (r *PatientRepository) UpdateCard(ctx context.Context, id int64, c entity.Card) error {
 	q := `
 UPDATE cards
 SET patient_id = $1,  chronic_diseases = $2, disability_group = $3, blood_type = $4, rh_factor = $5, consultations = $6
@@ -225,5 +239,45 @@ WHERE id = $7
 		id,
 	)
 
-	return c, err
+	return err
+}
+
+func (r *PatientRepository) DeleteCard(ctx context.Context, id int64) error {
+	q := "DELETE FROM cards WHERE id = $1"
+
+	_, err := r.db.ExecContext(ctx, q, id)
+
+	return err
+}
+
+func (r *PatientRepository) patientCard(ctx context.Context, patientID int64) (entity.Card, error) {
+	var c entity.Card
+
+	q := `
+SELECT id, patient_id, chronic_diseases, disability_group, blood_type, rh_factor, consultations, created_at, updated_at
+FROM cards
+WHERE patient_id = $1
+`
+
+	err := r.db.QueryRowContext(ctx, q, patientID).
+		Scan(
+			&c.ID,
+			&c.PatientID,
+			&c.ChronicDiseases,
+			&c.DisabilityGroup,
+			&c.BloodType,
+			&c.RhFactor,
+			&c.Consultations,
+			&c.CreatedAt,
+			&c.UpdatedAt,
+		)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return c, service.ErrNotFound
+		}
+
+		return c, err
+	}
+
+	return c, nil
 }

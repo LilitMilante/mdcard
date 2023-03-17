@@ -15,12 +15,13 @@ type PatientRepository interface {
 	PatientByID(ctx context.Context, id int64) (entity.Patient, error)
 	CreatePatient(ctx context.Context, p entity.Patient) (entity.Patient, error)
 	Patients(ctx context.Context) ([]entity.Patient, error)
-	UpdatePatient(ctx context.Context, id int64, p entity.Patient) (entity.Patient, error)
+	UpdatePatient(ctx context.Context, id int64, p entity.Patient) error
 	DeletePatient(ctx context.Context, id int64) error
 
 	CreateCard(ctx context.Context, c entity.Card) (entity.Card, error)
-	CardByPatientPassportNumber(ctx context.Context, number string) (entity.Card, error)
-	UpdateCard(ctx context.Context, id int64, c entity.Card) (entity.Card, error)
+	CardByID(ctx context.Context, id int64) (entity.Card, error)
+	UpdateCard(ctx context.Context, id int64, c entity.Card) error
+	DeleteCard(ctx context.Context, id int64) error
 }
 
 type PatientService struct {
@@ -71,20 +72,20 @@ func (s *PatientService) PatientByPassportNumber(ctx context.Context, passNumber
 	return s.repo.PatientByPassportNumber(ctx, passNumber)
 }
 
-func (s *PatientService) UpdatePatient(ctx context.Context, id int64, p entity.Patient) (entity.Patient, error) {
+func (s *PatientService) UpdatePatient(ctx context.Context, id int64, p entity.Patient) error {
 	_, err := s.repo.PatientByID(ctx, id)
 	if err != nil {
-		return p, fmt.Errorf("patient with id %d: %w", id, err)
+		return fmt.Errorf("patient with id %d: %w", id, err)
 	}
 
 	p.UpdatedAt = time.Now()
 
-	p, err = s.repo.UpdatePatient(ctx, id, p)
+	err = s.repo.UpdatePatient(ctx, id, p)
 	if err != nil {
-		return entity.Patient{}, err
+		return err
 	}
 
-	return p, nil
+	return nil
 }
 
 func (s *PatientService) DeletePatient(ctx context.Context, id int64) error {
@@ -101,11 +102,11 @@ func (s *PatientService) DeletePatient(ctx context.Context, id int64) error {
 func (s *PatientService) AddCard(ctx context.Context, c entity.Card) (entity.Card, error) {
 	_, err := s.repo.PatientByID(ctx, c.PatientID)
 	if err == nil {
-		return c, fmt.Errorf("card with patient id %q: %w", c.PatientID, ErrAlreadyExists)
+		return c, fmt.Errorf("patient with id %d: %w", c.PatientID, ErrAlreadyExists)
 	}
 
 	if !errors.Is(err, ErrNotFound) {
-		return c, fmt.Errorf("card with patient %q: %w", c.PatientID, err)
+		return c, fmt.Errorf("patient with id  %d: %w", c.PatientID, err)
 	}
 
 	c.CreatedAt = time.Now()
@@ -119,19 +120,22 @@ func (s *PatientService) AddCard(ctx context.Context, c entity.Card) (entity.Car
 	return card, nil
 }
 
-func (s *PatientService) CardByPatientPassportNumber(ctx context.Context, number string) (entity.Card, error) {
-	return s.repo.CardByPatientPassportNumber(ctx, number)
-}
-
-func (s *PatientService) UpdateCard(ctx context.Context, id int64, c entity.Card) (entity.Card, error) {
-	_, err := s.repo.PatientByID(ctx, id)
+func (s *PatientService) UpdateCard(ctx context.Context, id int64, c entity.Card) error {
+	_, err := s.repo.CardByID(ctx, id)
 	if err != nil {
-		return c, fmt.Errorf("patient with id %d: %w", id, err)
+		return fmt.Errorf("card with id %d: %w", id, err)
 	}
 
 	c.UpdatedAt = time.Now()
 
-	c, err = s.repo.UpdateCard(ctx, id, c)
+	return s.repo.UpdateCard(ctx, id, c)
+}
 
-	return c, err
+func (s *PatientService) DeleteCard(ctx context.Context, id int64) error {
+	_, err := s.repo.CardByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("card with id %d: %w", id, err)
+	}
+
+	return s.repo.DeleteCard(ctx, id)
 }

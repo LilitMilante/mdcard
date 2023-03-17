@@ -17,12 +17,12 @@ type Service interface {
 	AddPatient(ctx context.Context, p entity.Patient) (entity.Patient, error)
 	Patients(ctx context.Context) ([]entity.Patient, error)
 	PatientByPassportNumber(ctx context.Context, passNumber string) (entity.Patient, error)
-	UpdatePatient(ctx context.Context, id int64, p entity.Patient) (entity.Patient, error)
+	UpdatePatient(ctx context.Context, id int64, p entity.Patient) error
 	DeletePatient(ctx context.Context, id int64) error
 
 	AddCard(ctx context.Context, c entity.Card) (entity.Card, error)
-	CardByPatientPassportNumber(ctx context.Context, number string) (entity.Card, error)
-	UpdateCard(ctx context.Context, id int64, c entity.Card) (entity.Card, error)
+	UpdateCard(ctx context.Context, id int64, c entity.Card) error
+	DeleteCard(ctx context.Context, id int64) error
 }
 
 type PatientHandler struct {
@@ -95,7 +95,7 @@ func (h *PatientHandler) UpdatePatient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	patient, err = h.srv.UpdatePatient(r.Context(), int64(id), patient)
+	err = h.srv.UpdatePatient(r.Context(), int64(id), patient)
 	if err != nil {
 		SendErr(w, http.StatusInsufficientStorage, err)
 		return
@@ -145,18 +145,6 @@ func (h *PatientHandler) AddCard(w http.ResponseWriter, r *http.Request) {
 	SendJSON(w, card)
 }
 
-func (h *PatientHandler) CardByPatientPassportNumber(w http.ResponseWriter, r *http.Request) {
-	passNumber := mux.Vars(r)["passport_number"]
-
-	card, err := h.srv.CardByPatientPassportNumber(r.Context(), passNumber)
-	if err != nil {
-		SendErr(w, http.StatusInsufficientStorage, err)
-		return
-	}
-
-	SendJSON(w, card)
-}
-
 func (h *PatientHandler) UpdateCard(w http.ResponseWriter, r *http.Request) {
 	var card entity.Card
 
@@ -172,11 +160,27 @@ func (h *PatientHandler) UpdateCard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	card, err = h.srv.UpdateCard(r.Context(), int64(id), card)
+	err = h.srv.UpdateCard(r.Context(), int64(id), card)
 	if err != nil {
 		SendErr(w, http.StatusInsufficientStorage, err)
 		return
 	}
 
 	SendJSON(w, card)
+}
+
+func (h *PatientHandler) DeleteCard(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(mux.Vars(r)["id"])
+	if err != nil {
+		SendErr(w, http.StatusBadRequest, err)
+		return
+	}
+
+	err = h.srv.DeleteCard(r.Context(), int64(id))
+	if err != nil {
+		SendErr(w, http.StatusInsufficientStorage, err)
+		return
+	}
+
+	SendJSON(w, id)
 }

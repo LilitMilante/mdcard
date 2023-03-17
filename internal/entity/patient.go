@@ -15,6 +15,7 @@ type Patient struct {
 	PhoneNumber    string    `json:"phone_number"`
 	PassportNumber string    `json:"passport_number"`
 	Login          string    `json:"login"`
+	Card           *Card     `json:"card"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }

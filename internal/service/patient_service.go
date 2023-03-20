@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"medical-card/internal/entity"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type PatientRepository interface {
@@ -21,7 +23,6 @@ type PatientRepository interface {
 	CreateCard(ctx context.Context, c entity.Card) (entity.Card, error)
 	CardByID(ctx context.Context, id int64) (entity.Card, error)
 	UpdateCard(ctx context.Context, id int64, c entity.Card) error
-	DeleteCard(ctx context.Context, id int64) error
 }
 
 type PatientService struct {
@@ -53,6 +54,10 @@ func (s *PatientService) AddPatient(ctx context.Context, p entity.Patient) (enti
 		return p, fmt.Errorf("patient with login %q: %w", p.Login, err)
 	}
 
+	p.Password, err = s.hashPassword(p.Password)
+	if err != nil {
+		return p, err
+	}
 	p.CreatedAt = time.Now()
 	p.UpdatedAt = p.CreatedAt
 
@@ -70,6 +75,10 @@ func (s *PatientService) Patients(ctx context.Context) ([]entity.Patient, error)
 
 func (s *PatientService) PatientByPassportNumber(ctx context.Context, passNumber string) (entity.Patient, error) {
 	return s.repo.PatientByPassportNumber(ctx, passNumber)
+}
+
+func (s *PatientService) PatientByLogin(ctx context.Context, login string) (entity.Patient, error) {
+	return s.repo.PatientByLogin(ctx, login)
 }
 
 func (s *PatientService) UpdatePatient(ctx context.Context, id int64, p entity.Patient) error {
@@ -131,11 +140,11 @@ func (s *PatientService) UpdateCard(ctx context.Context, id int64, c entity.Card
 	return s.repo.UpdateCard(ctx, id, c)
 }
 
-func (s *PatientService) DeleteCard(ctx context.Context, id int64) error {
-	_, err := s.repo.CardByID(ctx, id)
+func (s *PatientService) hashPassword(password string) (string, error) {
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return fmt.Errorf("card with id %d: %w", id, err)
+		return "", err
 	}
 
-	return s.repo.DeleteCard(ctx, id)
+	return string(passwordHash), nil
 }

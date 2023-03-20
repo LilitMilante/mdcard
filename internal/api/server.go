@@ -36,5 +36,7 @@ func (s *Server) Start() error {
 	s.r.HandleFunc("/patients/cards", s.ph.AddCard).Methods(http.MethodPost)
 	s.r.HandleFunc("/patients/cards/{id}", s.ph.UpdateCard).Methods(http.MethodPut)
 
+	s.r.HandleFunc("/sessions", s.ph.SessionsCreate).Methods(http.MethodPost)
+
 	return s.srv.ListenAndServe()
 }

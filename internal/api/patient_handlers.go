@@ -17,12 +17,12 @@ type Service interface {
 	AddPatient(ctx context.Context, p entity.Patient) (entity.Patient, error)
 	Patients(ctx context.Context) ([]entity.Patient, error)
 	PatientByPassportNumber(ctx context.Context, passNumber string) (entity.Patient, error)
+	PatientByLogin(ctx context.Context, login string) (entity.Patient, error)
 	UpdatePatient(ctx context.Context, id int64, p entity.Patient) error
 	DeletePatient(ctx context.Context, id int64) error
 
 	AddCard(ctx context.Context, c entity.Card) (entity.Card, error)
 	UpdateCard(ctx context.Context, id int64, c entity.Card) error
-	DeleteCard(ctx context.Context, id int64) error
 }
 
 type PatientHandler struct {
@@ -54,6 +54,8 @@ func (h *PatientHandler) AddPatient(w http.ResponseWriter, r *http.Request) {
 		SendErr(w, http.StatusInternalServerError, err)
 		return
 	}
+
+	patient.Sanitize()
 
 	SendJSON(w, patient)
 }
@@ -169,18 +171,22 @@ func (h *PatientHandler) UpdateCard(w http.ResponseWriter, r *http.Request) {
 	SendJSON(w, card)
 }
 
-func (h *PatientHandler) DeleteCard(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(mux.Vars(r)["id"])
+// Sessions
+
+func (h *PatientHandler) SessionsCreate(w http.ResponseWriter, r *http.Request) {
+	var patient entity.Patient
+
+	err := json.NewDecoder(r.Body).Decode(&patient)
 	if err != nil {
 		SendErr(w, http.StatusBadRequest, err)
 		return
 	}
 
-	err = h.srv.DeleteCard(r.Context(), int64(id))
-	if err != nil {
-		SendErr(w, http.StatusInsufficientStorage, err)
+	patient, err = h.srv.PatientByLogin(r.Context(), patient.Login)
+	if err != nil || !patient.ComparePassword(patient.Password) {
+		SendErr(w, http.StatusUnauthorized, service.ErrIncorrectEmailOrPassword)
 		return
 	}
 
-	SendJSON(w, id)
+	SendJSON(w, nil)
 }

@@ -5,19 +5,23 @@ import (
 	"encoding/json"
 	"errors"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Patient struct {
-	ID             int64     `json:"id"`
-	FullName       string    `json:"full_name"`
-	DateOfBorn     time.Time `json:"date_of_born"`
-	Address        Address   `json:"address"`
-	PhoneNumber    string    `json:"phone_number"`
-	PassportNumber string    `json:"passport_number"`
-	Login          string    `json:"login"`
-	Card           *Card     `json:"card"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	ID                int64     `json:"id"`
+	FullName          string    `json:"full_name"`
+	DateOfBorn        time.Time `json:"date_of_born"`
+	Address           Address   `json:"address"`
+	PhoneNumber       string    `json:"phone_number"`
+	PassportNumber    string    `json:"passport_number"`
+	Login             string    `json:"login"`
+	Password          string    `json:"password,omitempty"`
+	EncryptedPassword string    `json:"-"`
+	Card              *Card     `json:"card"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
 }
 
 type Address struct {
@@ -39,4 +43,12 @@ func (a *Address) Scan(value any) error {
 	}
 
 	return json.Unmarshal(b, &a)
+}
+
+func (p *Patient) Sanitize() {
+	p.Password = ""
+}
+
+func (p *Patient) ComparePassword(password string) bool {
+	return bcrypt.CompareHashAndPassword([]byte(p.EncryptedPassword), []byte(password)) == nil
 }

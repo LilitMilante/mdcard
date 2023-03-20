@@ -38,8 +38,8 @@ func (r *PatientRepository) PatientByID(ctx context.Context, id int64) (entity.P
 
 func (r *PatientRepository) CreatePatient(ctx context.Context, p entity.Patient) (entity.Patient, error) {
 	q := `
-INSERT INTO patients (full_name, data_of_born, address, phone_number, passport_number, login, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id
+INSERT INTO patients (full_name, data_of_born, address, phone_number, passport_number, login, password, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id
 `
 	err := r.db.QueryRowContext(
 		ctx,
@@ -50,6 +50,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id
 		p.PhoneNumber,
 		p.PassportNumber,
 		p.Login,
+		p.Password,
 		p.CreatedAt,
 		p.UpdatedAt).
 		Scan(&p.ID)
@@ -122,6 +123,8 @@ func (r *PatientRepository) DeletePatient(ctx context.Context, id int64) error {
 	q := "DELETE FROM patients WHERE id = $1"
 
 	_, err := r.db.ExecContext(ctx, q, id)
+
+	err = r.deleteCard(ctx, id)
 
 	return err
 }
@@ -242,14 +245,6 @@ WHERE id = $7
 	return err
 }
 
-func (r *PatientRepository) DeleteCard(ctx context.Context, id int64) error {
-	q := "DELETE FROM cards WHERE id = $1"
-
-	_, err := r.db.ExecContext(ctx, q, id)
-
-	return err
-}
-
 func (r *PatientRepository) patientCard(ctx context.Context, patientID int64) (entity.Card, error) {
 	var c entity.Card
 
@@ -280,4 +275,12 @@ WHERE patient_id = $1
 	}
 
 	return c, nil
+}
+
+func (r *PatientRepository) deleteCard(ctx context.Context, patientID int64) error {
+	q := "DELETE FROM cards WHERE patient_id = $1"
+
+	_, err := r.db.ExecContext(ctx, q, patientID)
+
+	return err
 }

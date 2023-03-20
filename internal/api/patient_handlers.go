@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -23,6 +24,8 @@ type Service interface {
 
 	AddCard(ctx context.Context, c entity.Card) (entity.Card, error)
 	UpdateCard(ctx context.Context, id int64, c entity.Card) error
+
+	Login(ctx context.Context, patientID int64) (entity.Session, error)
 }
 
 type PatientHandler struct {
@@ -173,7 +176,7 @@ func (h *PatientHandler) UpdateCard(w http.ResponseWriter, r *http.Request) {
 
 // Sessions
 
-func (h *PatientHandler) SessionsCreate(w http.ResponseWriter, r *http.Request) {
+func (h *PatientHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var patient entity.Patient
 
 	err := json.NewDecoder(r.Body).Decode(&patient)
@@ -183,10 +186,29 @@ func (h *PatientHandler) SessionsCreate(w http.ResponseWriter, r *http.Request) 
 	}
 
 	patient, err = h.srv.PatientByLogin(r.Context(), patient.Login)
-	if err != nil || !patient.ComparePassword(patient.Password) {
-		SendErr(w, http.StatusUnauthorized, service.ErrIncorrectEmailOrPassword)
+	if err != nil {
+		if errors.Is(err, service.ErrNotFound) || !patient.ComparePassword(patient.Password) {
+			SendErr(w, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+			return
+		}
+
+		SendErr(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	SendJSON(w, nil)
+	sess, err := h.srv.Login(r.Context(), patient.ID)
+	if err != nil {
+		SendErr(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	cookie := &http.Cookie{
+		Name:    "session",
+		Value:   sess.ID.String(),
+		Expires: sess.ExpiredAt,
+	}
+
+	http.SetCookie(w, cookie)
+
+	SendJSON(w, "added session!")
 }

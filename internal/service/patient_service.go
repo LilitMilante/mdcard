@@ -8,6 +8,7 @@ import (
 
 	"medical-card/internal/entity"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -23,6 +24,8 @@ type PatientRepository interface {
 	CreateCard(ctx context.Context, c entity.Card) (entity.Card, error)
 	CardByID(ctx context.Context, id int64) (entity.Card, error)
 	UpdateCard(ctx context.Context, id int64, c entity.Card) error
+
+	Login(ctx context.Context, sess entity.Session) error
 }
 
 type PatientService struct {
@@ -147,4 +150,22 @@ func (s *PatientService) hashPassword(password string) (string, error) {
 	}
 
 	return string(passwordHash), nil
+}
+
+// Session
+
+func (s *PatientService) Login(ctx context.Context, patientID int64) (entity.Session, error) {
+	sess := entity.Session{
+		ID:        uuid.New(),
+		PatientID: patientID,
+		CreatedAt: time.Now(),
+		ExpiredAt: time.Now().Add(time.Minute * 1),
+	}
+
+	err := s.repo.Login(ctx, sess)
+	if err != nil {
+		return entity.Session{}, err
+	}
+
+	return sess, nil
 }

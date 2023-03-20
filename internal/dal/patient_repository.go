@@ -284,3 +284,13 @@ func (r *PatientRepository) deleteCard(ctx context.Context, patientID int64) err
 
 	return err
 }
+
+// Session
+
+func (r *PatientRepository) Login(ctx context.Context, sess entity.Session) error {
+	q := `
+INSERT INTO sessions (id, patient_id, created_at, expired_at) VALUES ($1, $2, $3, $4)
+`
+	_, err := r.db.ExecContext(ctx, q, sess.ID, sess.PatientID, sess.CreatedAt, sess.ExpiredAt)
+	return err
+}

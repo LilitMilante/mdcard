@@ -26,6 +26,7 @@ type PatientRepository interface {
 	UpdateCard(ctx context.Context, id int64, c entity.Card) error
 
 	Login(ctx context.Context, sess entity.Session) error
+	SessionByID(ctx context.Context, id string) (entity.Session, error)
 }
 
 type PatientService struct {
@@ -168,4 +169,22 @@ func (s *PatientService) Login(ctx context.Context, patientID int64) (entity.Ses
 	}
 
 	return sess, nil
+}
+
+func (s *PatientService) PatientBySessionID(ctx context.Context, ssid string) (entity.Patient, error) {
+	session, err := s.repo.SessionByID(ctx, ssid)
+	if err != nil {
+		return entity.Patient{}, err
+	}
+
+	if time.Now().After(session.ExpiredAt) {
+		return entity.Patient{}, fmt.Errorf("%w: session expired", ErrUnauthorized)
+	}
+
+	patient, err := s.repo.PatientByID(ctx, session.PatientID)
+	if err != nil {
+		return patient, err
+	}
+
+	return patient, nil
 }

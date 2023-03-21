@@ -24,7 +24,8 @@ func main() {
 	patientRepository := dal.NewPatientRepository(db)
 	patientService := service.NewPatientService(patientRepository)
 	patientHandler := api.NewPatientHandler(patientService)
-	server := api.NewServer(c.Port, patientHandler)
+	authMw := api.NewAuthMiddleware(patientService)
+	server := api.NewServer(c.Port, patientHandler, authMw)
 
 	log.Println("server started at:", c.Port)
 	err = server.Start()

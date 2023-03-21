@@ -9,6 +9,10 @@ migrate-up:
 	docker run -v /Users/lilit/GolandProjects/medical-card/migrations:/migrations --network mdcard migrate/migrate \
         -path=/migrations/ -database postgres://dev:dev@mdcard_db:5432/mdcard?sslmode=disable up
 
+migrate-down:
+	docker run -v /Users/lilit/GolandProjects/medical-card/migrations:/migrations --network mdcard migrate/migrate \
+        -path=/migrations/ -database postgres://dev:dev@mdcard_db:5432/mdcard?sslmode=disable down 1
+
 migrate-new:
 	docker run -v /Users/lilit/GolandProjects/medical-card/migrations:/migrations --network mdcard migrate/migrate create -ext sql -dir /migrations "$(name)"
 

@@ -4,6 +4,9 @@ import (
 	"errors"
 )
 
-var ErrAlreadyExists = errors.New("already exists")
-var ErrNotFound = errors.New("not found")
-var ErrInternal = errors.New("internal error")
+var (
+	ErrAlreadyExists = errors.New("already exists")
+	ErrNotFound      = errors.New("not found")
+	ErrInternal      = errors.New("internal error")
+	ErrUnauthorized  = errors.New("unauthorized")
+)

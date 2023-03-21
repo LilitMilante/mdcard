@@ -294,3 +294,19 @@ INSERT INTO sessions (id, patient_id, created_at, expired_at) VALUES ($1, $2, $3
 	_, err := r.db.ExecContext(ctx, q, sess.ID, sess.PatientID, sess.CreatedAt, sess.ExpiredAt)
 	return err
 }
+
+func (r *PatientRepository) SessionByID(ctx context.Context, id string) (sess entity.Session, err error) {
+	q := "SELECT id, patient_id, created_at, expired_at FROM sessions WHERE id = $1"
+
+	err = r.db.QueryRowContext(ctx, q, id).
+		Scan(&sess.ID, &sess.PatientID, &sess.CreatedAt, &sess.ExpiredAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return sess, service.ErrNotFound
+		}
+
+		return sess, err
+	}
+
+	return sess, nil
+}

@@ -26,6 +26,7 @@ type Service interface {
 	UpdateCard(ctx context.Context, id int64, c entity.Card) error
 
 	Login(ctx context.Context, patientID int64) (entity.Session, error)
+	PatientBySessionID(ctx context.Context, ssid string) (entity.Patient, error)
 }
 
 type PatientHandler struct {
@@ -188,7 +189,7 @@ func (h *PatientHandler) Login(w http.ResponseWriter, r *http.Request) {
 	patient, err = h.srv.PatientByLogin(r.Context(), patient.Login)
 	if err != nil {
 		if errors.Is(err, service.ErrNotFound) || !patient.ComparePassword(patient.Password) {
-			SendErr(w, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+			SendErr(w, http.StatusUnauthorized, fmt.Errorf("%w: incorrect login or password", service.ErrUnauthorized))
 			return
 		}
 
@@ -203,12 +204,10 @@ func (h *PatientHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cookie := &http.Cookie{
-		Name:    "session",
+		Name:    "ssid",
 		Value:   sess.ID.String(),
 		Expires: sess.ExpiredAt,
 	}
 
 	http.SetCookie(w, cookie)
-
-	SendJSON(w, "added session!")
 }
